@@ -86,18 +86,15 @@ async function sendClawdbotNotification(event: WebhookEvent, task: TaskData, cha
   const message = formatClawdbotMessage(event, task, changes);
 
   try {
-    const response = await fetch(`${clawdbotUrl}/hooks/agent`, {
+    const response = await fetch(`${clawdbotUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${clawdbotToken}`,
       },
       body: JSON.stringify({
-        message,
-        name: 'Kanban',
-        sessionKey: `hook:kanban:task-${task.id}`,
-        deliver: false, // Don't echo to chat, just process
-        model: 'anthropic/claude-sonnet-4-5',
+        model: 'openclaw:main',
+        messages: [{ role: 'user', content: message }],
       }),
     });
 
