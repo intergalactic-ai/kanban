@@ -27,8 +27,6 @@ jobs:
           PR_TITLE: ${{ github.event.issue.title }}
           COMMENTER: ${{ github.event.comment.user.login }}
           COMMENT_BODY: ${{ github.event.comment.body }}
-          TRIGGER_COMMENT_ID: ${{ github.event.comment.id }}
-          EYES_REACTION_ID: ${{ steps.eyes.outputs.reaction_id }}
           REPO: ${{ github.repository }}
           WEBHOOK_URL: ${{ secrets.CLAWDBOT_WEBHOOK_URL }}
           HOOK_TOKEN: ${{ secrets.CLAWDBOT_HOOK_TOKEN }}
@@ -39,9 +37,7 @@ jobs:
             --arg repo "$REPO" \
             --arg commenter "$COMMENTER" \
             --arg body "$COMMENT_BODY" \
-            --arg cid "$TRIGGER_COMMENT_ID" \
-            --arg eid "$EYES_REACTION_ID" \
-            '"PR #\($pr) (\($title)) in \($repo): \($commenter) tagged you with: \"\($body)\". When you start: remove the 👀 reaction (gh api repos/\($repo)/issues/comments/\($cid)/reactions/\($eid) --method DELETE) and add 🚀 (gh api repos/\($repo)/issues/comments/\($cid)/reactions --method POST -f content=rocket, save the returned id). Review the PR: gh pr checkout \($pr) --repo \($repo) then gh pr diff \($pr) --repo \($repo). Approve if good (gh pr review \($pr) --repo \($repo) --approve --body ...) or request changes. When done: remove the 🚀 reaction and add 🎉 (gh api repos/\($repo)/issues/comments/\($cid)/reactions --method POST -f content=hooray). Post your verdict as a reply comment on PR \($pr)."')
+            '"PR #\($pr) (\($title)) in \($repo): \($commenter) tagged you with: \"\($body)\". Review the PR: gh pr checkout \($pr) --repo \($repo) then gh pr diff \($pr) --repo \($repo). Approve if good (gh pr review \($pr) --repo \($repo) --approve --body ...) or request changes. Post your verdict as a reply comment on the PR."')
 
           JSON_PAYLOAD=$(jq -n \
             --arg message "$MESSAGE" \
@@ -53,7 +49,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$JSON_PAYLOAD"
 
-      - name: Swap eyes to rocket (working)
+      - name: Swap eyes to rocket (delivered)
         if: success()
         env:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
@@ -66,7 +62,7 @@ jobs:
           gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
             --method POST -f content='rocket'
 
-      - name: React confused on failure
+      - name: Swap eyes to confused (failed)
         if: failure()
         continue-on-error: true
         env:
