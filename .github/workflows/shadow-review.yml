@@ -9,15 +9,16 @@ jobs:
     if: github.event.issue.pull_request != null && contains(github.event.comment.body, '@shadowbot28')
     runs-on: self-hosted
     steps:
-      - name: React with eyes (seen)
-        continue-on-error: true
+      - name: Post eyes comment
+        id: eyes
         env:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
-          COMMENT_ID: ${{ github.event.comment.id }}
+          PR_NUMBER: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
         run: |
-          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
-            --method POST -f content='eyes'
+          COMMENT_ID=$(gh api repos/${REPO}/issues/${PR_NUMBER}/comments \
+            --method POST -f body='👀' --jq '.id')
+          echo "comment_id=${COMMENT_ID}" >> $GITHUB_OUTPUT
 
       - name: Notify Shadow
         id: notify
@@ -27,10 +28,11 @@ jobs:
           COMMENTER: ${{ github.event.comment.user.login }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           REPO: ${{ github.repository }}
+          STATUS_COMMENT_ID: ${{ steps.eyes.outputs.comment_id }}
           WEBHOOK_URL: ${{ secrets.CLAWDBOT_WEBHOOK_URL }}
           HOOK_TOKEN: ${{ secrets.CLAWDBOT_HOOK_TOKEN }}
         run: |
-          MESSAGE="PR #${PR_NUMBER} (${PR_TITLE}) in ${REPO}: ${COMMENTER} tagged you with: \"${COMMENT_BODY}\". Please review the PR and respond accordingly."
+          MESSAGE="PR #${PR_NUMBER} (${PR_TITLE}) in ${REPO}: ${COMMENTER} tagged you with: \"${COMMENT_BODY}\". Please review the PR and respond accordingly. When you start working, update status comment ID ${STATUS_COMMENT_ID} on the PR to ⏳ using: gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method PATCH -f body='⏳'. When you finish, delete that comment and post a new comment '✅ Done' on the PR."
 
           JSON_PAYLOAD=$(jq -n \
             --arg message "$MESSAGE" \
@@ -42,24 +44,23 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$JSON_PAYLOAD"
 
-      - name: React with rocket (delivered)
+      - name: Update to hourglass
         if: success()
-        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
-          COMMENT_ID: ${{ github.event.comment.id }}
+          COMMENT_ID: ${{ steps.eyes.outputs.comment_id }}
           REPO: ${{ github.repository }}
         run: |
-          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
-            --method POST -f content='rocket'
+          gh api repos/${REPO}/issues/comments/${COMMENT_ID} \
+            --method PATCH -f body='⏳'
 
-      - name: React with confused (failed)
+      - name: Update to confused on failure
         if: failure()
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
-          COMMENT_ID: ${{ github.event.comment.id }}
+          COMMENT_ID: ${{ steps.eyes.outputs.comment_id }}
           REPO: ${{ github.repository }}
         run: |
-          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
-            --method POST -f content='confused'
+          gh api repos/${REPO}/issues/comments/${COMMENT_ID} \
+            --method PATCH -f body='❌'
