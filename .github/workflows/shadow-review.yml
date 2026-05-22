@@ -8,15 +8,14 @@ jobs:
   review:
     if: github.event.issue.pull_request != null && contains(github.event.comment.body, '@shadowbot28')
     runs-on: self-hosted
-    permissions:
-      issues: write
     steps:
       - name: React with eyes (seen)
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ github.token }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          REPO: ${{ github.repository }}
         run: |
-          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
             --method POST -f content='eyes'
 
       - name: Notify Shadow
@@ -46,16 +45,18 @@ jobs:
         if: success()
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ github.token }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          REPO: ${{ github.repository }}
         run: |
-          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
             --method POST -f content='rocket'
 
       - name: React with confused (failed)
         if: failure()
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ github.token }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          REPO: ${{ github.repository }}
         run: |
-          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
             --method POST -f content='confused'
