@@ -9,16 +9,16 @@ jobs:
     if: github.event.issue.pull_request != null && contains(github.event.comment.body, '@shadowbot28')
     runs-on: self-hosted
     steps:
-      - name: Post eyes comment
+      - name: React eyes (seen)
         id: eyes
         env:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
-          PR_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
           REPO: ${{ github.repository }}
         run: |
-          COMMENT_ID=$(gh api repos/${REPO}/issues/${PR_NUMBER}/comments \
-            --method POST -f body='👀' --jq '.id')
-          echo "comment_id=${COMMENT_ID}" >> $GITHUB_OUTPUT
+          REACTION_ID=$(gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
+            --method POST -f content='eyes' --jq '.id')
+          echo "reaction_id=${REACTION_ID}" >> $GITHUB_OUTPUT
 
       - name: Notify Shadow
         id: notify
@@ -27,8 +27,9 @@ jobs:
           PR_TITLE: ${{ github.event.issue.title }}
           COMMENTER: ${{ github.event.comment.user.login }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          TRIGGER_COMMENT_ID: ${{ github.event.comment.id }}
+          EYES_REACTION_ID: ${{ steps.eyes.outputs.reaction_id }}
           REPO: ${{ github.repository }}
-          STATUS_COMMENT_ID: ${{ steps.eyes.outputs.comment_id }}
           WEBHOOK_URL: ${{ secrets.CLAWDBOT_WEBHOOK_URL }}
           HOOK_TOKEN: ${{ secrets.CLAWDBOT_HOOK_TOKEN }}
         run: |
@@ -38,8 +39,9 @@ jobs:
             --arg repo "$REPO" \
             --arg commenter "$COMMENTER" \
             --arg body "$COMMENT_BODY" \
-            --arg sid "$STATUS_COMMENT_ID" \
-            '"PR #\($pr) (\($title)) in \($repo): \($commenter) tagged you with: \"\($body)\". Review the PR branch and diff. (1) Update status comment \($sid) to ⏳ when you start. (2) gh pr checkout \($pr) --repo \($repo) then gh pr diff \($pr) --repo \($repo). (3) gh pr review \($pr) --repo \($repo) --approve or --request-changes with a body. (4) Delete status comment \($sid) and post a reply on PR \($pr) in \($repo) with your verdict ending in ✅"')
+            --arg cid "$TRIGGER_COMMENT_ID" \
+            --arg eid "$EYES_REACTION_ID" \
+            '"PR #\($pr) (\($title)) in \($repo): \($commenter) tagged you with: \"\($body)\". When you start: remove the 👀 reaction (gh api repos/\($repo)/issues/comments/\($cid)/reactions/\($eid) --method DELETE) and add 🚀 (gh api repos/\($repo)/issues/comments/\($cid)/reactions --method POST -f content=rocket, save the returned id). Review the PR: gh pr checkout \($pr) --repo \($repo) then gh pr diff \($pr) --repo \($repo). Approve if good (gh pr review \($pr) --repo \($repo) --approve --body ...) or request changes. When done: remove the 🚀 reaction and add 🎉 (gh api repos/\($repo)/issues/comments/\($cid)/reactions --method POST -f content=hooray). Post your verdict as a reply comment on PR \($pr)."')
 
           JSON_PAYLOAD=$(jq -n \
             --arg message "$MESSAGE" \
@@ -51,23 +53,29 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$JSON_PAYLOAD"
 
-      - name: Update to hourglass
+      - name: Swap eyes to rocket (working)
         if: success()
         env:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
-          COMMENT_ID: ${{ steps.eyes.outputs.comment_id }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          EYES_REACTION_ID: ${{ steps.eyes.outputs.reaction_id }}
           REPO: ${{ github.repository }}
         run: |
-          gh api repos/${REPO}/issues/comments/${COMMENT_ID} \
-            --method PATCH -f body='⏳'
+          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions/${EYES_REACTION_ID} \
+            --method DELETE
+          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
+            --method POST -f content='rocket'
 
-      - name: Update to error on failure
+      - name: React confused on failure
         if: failure()
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
-          COMMENT_ID: ${{ steps.eyes.outputs.comment_id }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          EYES_REACTION_ID: ${{ steps.eyes.outputs.reaction_id }}
           REPO: ${{ github.repository }}
         run: |
-          gh api repos/${REPO}/issues/comments/${COMMENT_ID} \
-            --method PATCH -f body='❌'
+          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions/${EYES_REACTION_ID} \
+            --method DELETE
+          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
+            --method POST -f content='confused'
