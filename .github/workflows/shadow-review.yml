@@ -15,6 +15,7 @@ jobs:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
           PR_NUMBER: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
+          TRIGGER_COMMENT_ID: ${{ github.event.comment.id }}
         run: |
           COMMENT_ID=$(gh api repos/${REPO}/issues/${PR_NUMBER}/comments \
             --method POST -f body='👀' --jq '.id')
@@ -27,12 +28,16 @@ jobs:
           PR_TITLE: ${{ github.event.issue.title }}
           COMMENTER: ${{ github.event.comment.user.login }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          TRIGGER_COMMENT_ID: ${{ github.event.comment.id }}
           REPO: ${{ github.repository }}
           STATUS_COMMENT_ID: ${{ steps.eyes.outputs.comment_id }}
           WEBHOOK_URL: ${{ secrets.CLAWDBOT_WEBHOOK_URL }}
           HOOK_TOKEN: ${{ secrets.CLAWDBOT_HOOK_TOKEN }}
         run: |
-          MESSAGE="PR #${PR_NUMBER} (${PR_TITLE}) in ${REPO}: ${COMMENTER} tagged you with: \"${COMMENT_BODY}\". Please review the PR and respond accordingly. When you start working, update status comment ID ${STATUS_COMMENT_ID} on the PR to ⏳ using: gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method PATCH -f body='⏳'. When you finish, delete that comment and post a new comment '✅ Done' on the PR."
+          MESSAGE="PR #${PR_NUMBER} (${PR_TITLE}) in ${REPO}: ${COMMENTER} tagged you with: \"${COMMENT_BODY}\". Please review the PR and respond accordingly.
+
+When you start working: gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method PATCH -f body='⏳'
+When you finish: delete the status comment (gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method DELETE), then post your response as a reply by creating a new comment on PR #${PR_NUMBER} in ${REPO} that starts with \"> ${COMMENT_BODY}\" followed by a newline and your response, ending with ✅"
 
           JSON_PAYLOAD=$(jq -n \
             --arg message "$MESSAGE" \
@@ -54,7 +59,7 @@ jobs:
           gh api repos/${REPO}/issues/comments/${COMMENT_ID} \
             --method PATCH -f body='⏳'
 
-      - name: Update to confused on failure
+      - name: Update to error on failure
         if: failure()
         continue-on-error: true
         env:
