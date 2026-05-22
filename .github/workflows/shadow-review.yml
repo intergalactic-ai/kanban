@@ -32,16 +32,14 @@ jobs:
           WEBHOOK_URL: ${{ secrets.CLAWDBOT_WEBHOOK_URL }}
           HOOK_TOKEN: ${{ secrets.CLAWDBOT_HOOK_TOKEN }}
         run: |
-          MESSAGE="PR #${PR_NUMBER} (${PR_TITLE}) in ${REPO}: ${COMMENTER} tagged you with: \"${COMMENT_BODY}\". Please check out the PR branch, review the diff, and respond.
-
-Steps:
-1. Update status: gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method PATCH -f body='⏳'
-2. Check out the repo and review the changes: gh pr checkout ${PR_NUMBER} --repo ${REPO}, then gh pr diff ${PR_NUMBER} --repo ${REPO}
-3. If the changes look good: gh pr review ${PR_NUMBER} --repo ${REPO} --approve --body 'Your review comment here'
-   If changes need work: gh pr review ${PR_NUMBER} --repo ${REPO} --request-changes --body 'What needs to change'
-4. Delete status comment and post your response as a reply quoting the original: gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method DELETE, then gh api repos/${REPO}/issues/${PR_NUMBER}/comments --method POST -f body='> ${COMMENT_BODY}
-
-Your response here ✅'"
+          MESSAGE=$(jq -rn \
+            --arg pr "$PR_NUMBER" \
+            --arg title "$PR_TITLE" \
+            --arg repo "$REPO" \
+            --arg commenter "$COMMENTER" \
+            --arg body "$COMMENT_BODY" \
+            --arg sid "$STATUS_COMMENT_ID" \
+            '"PR #\($pr) (\($title)) in \($repo): \($commenter) tagged you with: \"\($body)\". Review the PR branch and diff. (1) Update status comment \($sid) to ⏳ when you start. (2) gh pr checkout \($pr) --repo \($repo) then gh pr diff \($pr) --repo \($repo). (3) gh pr review \($pr) --repo \($repo) --approve or --request-changes with a body. (4) Delete status comment \($sid) and post a reply on PR \($pr) in \($repo) with your verdict ending in ✅"')
 
           JSON_PAYLOAD=$(jq -n \
             --arg message "$MESSAGE" \
