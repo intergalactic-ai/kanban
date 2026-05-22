@@ -41,7 +41,7 @@ jobs:
             --arg repo "$REPO" \
             --arg commenter "$COMMENTER" \
             --arg body "$COMMENT_BODY" \
-            '"PR #\($pr) (\($title)) in \($repo): \($commenter) tagged you with: \"\($body)\". Review the PR: gh pr checkout \($pr) --repo \($repo) then gh pr diff \($pr) --repo \($repo). Approve if good (gh pr review \($pr) --repo \($repo) --approve --body ...) or request changes. Post your verdict as a reply comment on the PR."')
+            '"PR #\($pr) (\($title)) in \($repo) — \($commenter) says: \"\($body)\". Do exactly what was asked. If asked to review: gh pr checkout \($pr) --repo \($repo), gh pr diff \($pr) --repo \($repo), then gh pr review \($pr) --repo \($repo) --approve or --request-changes. If asked to fix/address comments/make changes: gh pr checkout \($pr) --repo \($repo), make the necessary code changes and commit them to the branch (use git commit with your name/email), then gh pr push. In either case post exactly one reply comment on PR \($pr) in \($repo) summarizing what you did."')
 
           JSON_PAYLOAD=$(jq -n \
             --arg message "$MESSAGE" \
