@@ -1,0 +1,58 @@
+name: Shadow Review
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  review:
+    if: github.event.issue.pull_request != null && contains(github.event.comment.body, '@shadowbot28')
+    runs-on: self-hosted
+    permissions:
+      issues: write
+    steps:
+      - name: React with eyes (seen)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+            --method POST -f content='eyes'
+
+      - name: Notify Shadow
+        id: notify
+        env:
+          PR_NUMBER: ${{ github.event.issue.number }}
+          PR_TITLE: ${{ github.event.issue.title }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          REPO: ${{ github.repository }}
+          WEBHOOK_URL: ${{ secrets.CLAWDBOT_WEBHOOK_URL }}
+          HOOK_TOKEN: ${{ secrets.CLAWDBOT_HOOK_TOKEN }}
+        run: |
+          MESSAGE="PR #${PR_NUMBER} (${PR_TITLE}) in ${REPO}: ${COMMENTER} tagged you with: \"${COMMENT_BODY}\". Please review the PR and respond accordingly."
+
+          JSON_PAYLOAD=$(jq -n \
+            --arg message "$MESSAGE" \
+            --arg sessionKey "hook:github:pr-${PR_NUMBER}" \
+            '{message: $message, name: "GitHub", sessionKey: $sessionKey, deliver: false, model: "anthropic/claude-sonnet-4-6"}')
+
+          curl -f -s -X POST "${WEBHOOK_URL}/hooks/agent" \
+            -H "Authorization: Bearer ${HOOK_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$JSON_PAYLOAD"
+
+      - name: React with rocket (delivered)
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+            --method POST -f content='rocket'
+
+      - name: React with confused (failed)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+            --method POST -f content='confused'
