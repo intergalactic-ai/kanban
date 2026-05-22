@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   review:
-    if: github.event.issue.pull_request != null && contains(github.event.comment.body, '@shadowbot28')
+    if: github.event.issue.pull_request != null && contains(github.event.comment.body, '@shadowbot28') && github.event.comment.user.login != 'shadowbot28'
     runs-on: self-hosted
     steps:
       - name: Notify Shadow
