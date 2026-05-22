@@ -15,7 +15,6 @@ jobs:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
           PR_NUMBER: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
-          TRIGGER_COMMENT_ID: ${{ github.event.comment.id }}
         run: |
           COMMENT_ID=$(gh api repos/${REPO}/issues/${PR_NUMBER}/comments \
             --method POST -f body='👀' --jq '.id')
@@ -28,16 +27,21 @@ jobs:
           PR_TITLE: ${{ github.event.issue.title }}
           COMMENTER: ${{ github.event.comment.user.login }}
           COMMENT_BODY: ${{ github.event.comment.body }}
-          TRIGGER_COMMENT_ID: ${{ github.event.comment.id }}
           REPO: ${{ github.repository }}
           STATUS_COMMENT_ID: ${{ steps.eyes.outputs.comment_id }}
           WEBHOOK_URL: ${{ secrets.CLAWDBOT_WEBHOOK_URL }}
           HOOK_TOKEN: ${{ secrets.CLAWDBOT_HOOK_TOKEN }}
         run: |
-          MESSAGE="PR #${PR_NUMBER} (${PR_TITLE}) in ${REPO}: ${COMMENTER} tagged you with: \"${COMMENT_BODY}\". Please review the PR and respond accordingly.
+          MESSAGE="PR #${PR_NUMBER} (${PR_TITLE}) in ${REPO}: ${COMMENTER} tagged you with: \"${COMMENT_BODY}\". Please check out the PR branch, review the diff, and respond.
 
-When you start working: gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method PATCH -f body='⏳'
-When you finish: delete the status comment (gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method DELETE), then post your response as a reply by creating a new comment on PR #${PR_NUMBER} in ${REPO} that starts with \"> ${COMMENT_BODY}\" followed by a newline and your response, ending with ✅"
+Steps:
+1. Update status: gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method PATCH -f body='⏳'
+2. Check out the repo and review the changes: gh pr checkout ${PR_NUMBER} --repo ${REPO}, then gh pr diff ${PR_NUMBER} --repo ${REPO}
+3. If the changes look good: gh pr review ${PR_NUMBER} --repo ${REPO} --approve --body 'Your review comment here'
+   If changes need work: gh pr review ${PR_NUMBER} --repo ${REPO} --request-changes --body 'What needs to change'
+4. Delete status comment and post your response as a reply quoting the original: gh api repos/${REPO}/issues/comments/${STATUS_COMMENT_ID} --method DELETE, then gh api repos/${REPO}/issues/${PR_NUMBER}/comments --method POST -f body='> ${COMMENT_BODY}
+
+Your response here ✅'"
 
           JSON_PAYLOAD=$(jq -n \
             --arg message "$MESSAGE" \
