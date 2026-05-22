@@ -13,24 +13,13 @@ jobs:
     if: github.event.issue.pull_request != null && contains(github.event.comment.body, '@shadowbot28')
     runs-on: self-hosted
     steps:
-      - name: React eyes (seen)
-        id: eyes
-        env:
-          GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
-          COMMENT_ID: ${{ github.event.comment.id }}
-          REPO: ${{ github.repository }}
-        run: |
-          REACTION_ID=$(gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
-            --method POST -f content='eyes' --jq '.id')
-          echo "reaction_id=${REACTION_ID}" >> $GITHUB_OUTPUT
-
       - name: Notify Shadow
-        id: notify
         env:
           PR_NUMBER: ${{ github.event.issue.number }}
           PR_TITLE: ${{ github.event.issue.title }}
           COMMENTER: ${{ github.event.comment.user.login }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_ID: ${{ github.event.comment.id }}
           REPO: ${{ github.repository }}
           WEBHOOK_URL: ${{ secrets.CLAWDBOT_WEBHOOK_URL }}
           HOOK_TOKEN: ${{ secrets.CLAWDBOT_HOOK_TOKEN }}
@@ -41,7 +30,8 @@ jobs:
             --arg repo "$REPO" \
             --arg commenter "$COMMENTER" \
             --arg body "$COMMENT_BODY" \
-            '"PR #\($pr) (\($title)) in \($repo) — \($commenter) says: \"\($body)\". Do exactly what was asked. If asked to review: gh pr checkout \($pr) --repo \($repo), gh pr diff \($pr) --repo \($repo), then gh pr review \($pr) --repo \($repo) --approve or --request-changes. If asked to fix/address comments/make changes: gh pr checkout \($pr) --repo \($repo), make the necessary code changes and commit them to the branch (use git commit with your name/email), then gh pr push. In either case post exactly one reply comment on PR \($pr) in \($repo) summarizing what you did."')
+            --arg cid "$COMMENT_ID" \
+            '"PR #\($pr) (\($title)) in \($repo) — \($commenter) says: \"\($body)\". FIRST add 👀 reaction to comment \($cid): gh api repos/\($repo)/issues/comments/\($cid)/reactions --method POST -f content=eyes --jq .id (save the reaction id). Then do exactly what was asked: review with gh pr review, or check out the branch (gh pr checkout \($pr) --repo \($repo)) and make commits, or reply to other comments, etc. When you finish, delete the 👀 reaction (gh api repos/\($repo)/issues/comments/\($cid)/reactions/<eyes_id> --method DELETE) and add 🚀 (gh api repos/\($repo)/issues/comments/\($cid)/reactions --method POST -f content=rocket). Post exactly one summary reply on PR \($pr)."')
 
           JSON_PAYLOAD=$(jq -n \
             --arg message "$MESSAGE" \
@@ -53,29 +43,13 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$JSON_PAYLOAD"
 
-      - name: Swap eyes to rocket (delivered)
-        if: success()
-        env:
-          GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
-          COMMENT_ID: ${{ github.event.comment.id }}
-          EYES_REACTION_ID: ${{ steps.eyes.outputs.reaction_id }}
-          REPO: ${{ github.repository }}
-        run: |
-          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions/${EYES_REACTION_ID} \
-            --method DELETE
-          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
-            --method POST -f content='rocket'
-
-      - name: Swap eyes to confused (failed)
+      - name: React confused on webhook failure
         if: failure()
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
           COMMENT_ID: ${{ github.event.comment.id }}
-          EYES_REACTION_ID: ${{ steps.eyes.outputs.reaction_id }}
           REPO: ${{ github.repository }}
         run: |
-          gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions/${EYES_REACTION_ID} \
-            --method DELETE
           gh api repos/${REPO}/issues/comments/${COMMENT_ID}/reactions \
             --method POST -f content='confused'
