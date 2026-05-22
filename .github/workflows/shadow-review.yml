@@ -12,6 +12,7 @@ jobs:
       - name: React with eyes (seen)
         continue-on-error: true
         env:
+          GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
           COMMENT_ID: ${{ github.event.comment.id }}
           REPO: ${{ github.repository }}
         run: |
@@ -45,6 +46,7 @@ jobs:
         if: success()
         continue-on-error: true
         env:
+          GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
           COMMENT_ID: ${{ github.event.comment.id }}
           REPO: ${{ github.repository }}
         run: |
@@ -55,6 +57,7 @@ jobs:
         if: failure()
         continue-on-error: true
         env:
+          GH_TOKEN: ${{ secrets.SHADOWBOT_GH_TOKEN }}
           COMMENT_ID: ${{ github.event.comment.id }}
           REPO: ${{ github.repository }}
         run: |
