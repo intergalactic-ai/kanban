@@ -36,12 +36,20 @@ export function Column({ column, tasks, epics = [], onViewTask, onEditTask, onDe
       `}
     >
       <div className="p-3 border-b border-zinc-800">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="font-semibold text-zinc-200">{column.title}</h2>
           <span className="text-xs text-zinc-500 bg-zinc-800 px-2 py-1 rounded">
             {tasks.length}
           </span>
         </div>
+        <button
+          onClick={() => onAddTask(column.id)}
+          className="w-full text-sm text-zinc-500 hover:text-zinc-300 
+                     hover:bg-zinc-800 rounded p-2 transition-colors
+                     flex items-center justify-center gap-1"
+        >
+          <span>+</span> Add Task
+        </button>
       </div>
       
       <div
@@ -70,17 +78,6 @@ export function Column({ column, tasks, epics = [], onViewTask, onEditTask, onDe
             Drop tasks here
           </div>
         )}
-      </div>
-      
-      <div className="p-2 border-t border-zinc-800">
-        <button
-          onClick={() => onAddTask(column.id)}
-          className="w-full text-sm text-zinc-500 hover:text-zinc-300 
-                     hover:bg-zinc-800 rounded p-2 transition-colors
-                     flex items-center justify-center gap-1"
-        >
-          <span>+</span> Add Task
-        </button>
       </div>
     </div>
   );

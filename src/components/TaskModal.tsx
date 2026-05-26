@@ -300,15 +300,33 @@ export function TaskModal({ isOpen, onClose, onSave, task, defaultColumnId, epic
             <label htmlFor="task-due-date" className="block text-sm text-zinc-400 mb-1">
               Due Date (optional)
             </label>
-            <input
-              id="task-due-date"
-              type="date"
-              value={dueDate}
-              onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
-                         text-zinc-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500
-                         [&::-webkit-calendar-picker-indicator]:invert"
-            />
+            <div className="flex gap-2">
+              <input
+                id="task-due-date"
+                type="date"
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                           text-zinc-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                           [&::-webkit-calendar-picker-indicator]:invert"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const today = new Date();
+                  const year = today.getFullYear();
+                  const month = String(today.getMonth() + 1).padStart(2, '0');
+                  const day = String(today.getDate()).padStart(2, '0');
+                  setDueDate(`${year}-${month}-${day}`);
+                }}
+                className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg
+                           text-zinc-300 text-sm font-medium hover:bg-zinc-700 hover:border-zinc-600
+                           focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                           transition-colors whitespace-nowrap"
+              >
+                Today
+              </button>
+            </div>
           </div>
 
           {/* Image Upload */}
